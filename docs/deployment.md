@@ -25,7 +25,8 @@ These are produced by the Part 4 and Part 5 scripts.
 
 ### Environment variables
 
-- NEXT_PUBLIC_API_BASE_URL=https://your-backend-domain.onrender.com
+- API_BASE_URL=https://your-backend-domain.onrender.com
+- NEXT_PUBLIC_API_BASE_URL= (optional)
 
 Use apps/web/.env.production.example as reference.
 
@@ -106,11 +107,12 @@ Cons: adds startup latency and requires download logic.
 
 To ensure frontend can call backend in production:
 
-1. Set NEXT_PUBLIC_API_BASE_URL on Vercel to deployed backend URL.
-2. Set backend CORS_ORIGINS to exact frontend origin.
-3. Set backend COOKIE_SECURE=true (required for HTTPS cookie auth).
-4. Redeploy both services after env updates.
-5. Verify with browser network tab that requests hit /search successfully.
+1. Set API_BASE_URL on Vercel to deployed backend URL.
+2. Keep NEXT_PUBLIC_API_BASE_URL empty unless you explicitly want direct browser-to-backend calls.
+3. Set backend CORS_ORIGINS to exact frontend origin.
+4. Set backend COOKIE_SECURE=true (required for HTTPS cookie auth).
+5. Redeploy both services after env updates.
+6. Verify with browser network tab that requests hit /search successfully.
 
 ## 7) Free-tier optimization notes
 

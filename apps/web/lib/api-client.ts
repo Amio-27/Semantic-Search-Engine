@@ -1,4 +1,7 @@
-export const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+const explicitApiBase = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+
+// Default to the Next.js same-origin proxy so production does not fall back to localhost.
+export const API_BASE = explicitApiBase ? explicitApiBase.replace(/\/+$/, "") : "/api";
 
 export class ApiError extends Error {
     status: number;
@@ -33,7 +36,9 @@ export async function apiRequest<T>(path: string, options?: RequestOptions): Pro
         if (options?.signal?.aborted) {
             throw error;
         }
-        throw new Error(`Could not reach backend API at ${API_BASE}. Please ensure the API server is running and CORS is configured for this frontend origin.`);
+        throw new Error(
+            `Could not reach backend API at ${API_BASE}. Check API_BASE_URL (server env) or NEXT_PUBLIC_API_BASE_URL (client env).`,
+        );
     }
 
     const maybeJson = await response.text();

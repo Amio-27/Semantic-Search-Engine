@@ -1,11 +1,10 @@
 import { type SearchResult } from "@/components/result-card";
+import { API_BASE } from "@/lib/api-client";
 
 export type SearchResponse = {
     query: string;
     results: SearchResult[];
 };
-
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
 function normalizeErrorMessage(status: number, detail?: string): string {
     if (status === 400 || status === 422) {
@@ -45,7 +44,7 @@ export async function fetchSemanticSearch(
             throw error;
         }
         throw new Error(
-            "Could not reach the backend API. Make sure it is running on http://localhost:8000.",
+            `Could not reach backend API at ${API_BASE}. Check API_BASE_URL or NEXT_PUBLIC_API_BASE_URL.`,
         );
     }
 
