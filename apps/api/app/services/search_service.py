@@ -4,6 +4,7 @@ from app.models.entities import User
 from app.schemas.search import SearchRequest, SearchResponse
 from app.services.embedder import Embedder
 from app.services.history_service import HistoryService
+from app.services.local_embeddings import embed_texts
 from app.services.vector_store import VectorStore
 
 
@@ -15,11 +16,23 @@ class SearchService:
 
     def run_search(self, payload: SearchRequest, user: User) -> SearchResponse:
         vector = self.embedder.embed(payload.query)
-        results = self.vector_store.search(
-            query_vector=vector,
-            top_k=payload.top_k,
-            tags=payload.tags,
-        )
+        try:
+            results = self.vector_store.search(
+                query_vector=vector,
+                top_k=payload.top_k,
+                tags=payload.tags,
+            )
+        except ValueError as exc:
+            if "dimension mismatch" not in str(exc).lower():
+                raise
+
+            # Fallback to local embedding with index-matching dimension.
+            fallback_vector = embed_texts([payload.query], dimension=self.vector_store.dimension)[0]
+            results = self.vector_store.search(
+                query_vector=fallback_vector,
+                top_k=payload.top_k,
+                tags=payload.tags,
+            )
 
         top = results[0] if results else None
         try:
