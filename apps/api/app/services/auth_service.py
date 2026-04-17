@@ -47,7 +47,14 @@ class AuthService:
 
     def authenticate(self, email: str, password: str, required_role: str | None = None) -> User:
         user = self.get_by_email(email)
-        if user is None or not verify_password(password, user.password_hash):
+        is_valid_password = False
+        if user is not None:
+            try:
+                is_valid_password = verify_password(password, user.password_hash)
+            except ValueError:
+                is_valid_password = False
+
+        if user is None or not is_valid_password:
             raise AuthError("Invalid credentials")
         if user.status != "active":
             raise AuthError("This account is blocked")
@@ -61,12 +68,30 @@ class AuthService:
 
         existing = self.get_by_email(settings.seed_admin_email)
         if existing is not None:
+            updated = False
+
             if existing.role != "admin":
                 existing.role = "admin"
+                updated = True
+
+            if existing.status != "active":
                 existing.status = "active"
+                updated = True
+
+            try:
+                password_matches_seed = verify_password(settings.seed_admin_password, existing.password_hash)
+            except ValueError:
+                password_matches_seed = False
+
+            if not password_matches_seed:
+                existing.password_hash = hash_password(settings.seed_admin_password)
+                updated = True
+
+            if updated:
                 self.db.add(existing)
                 self.db.commit()
                 self.db.refresh(existing)
+
             return existing
 
         admin = User(
