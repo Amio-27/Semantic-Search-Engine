@@ -8,6 +8,13 @@ import AuthShell from "@/components/auth/auth-shell";
 import { ApiError } from "@/lib/api-client";
 import { useAuth } from "@/context/auth-context";
 
+function normalizeUiError(message: string): string {
+    if (/load failed|failed to fetch|networkerror/i.test(message)) {
+        return "Could not reach authentication service. Check Vercel API_BASE_URL and backend health.";
+    }
+    return message;
+}
+
 function AdminLoginContent() {
     const { loginAdmin } = useAuth();
     const router = useRouter();
@@ -29,7 +36,7 @@ function AdminLoginContent() {
             router.replace(nextPath);
         } catch (err) {
             if (err instanceof ApiError) {
-                setError(err.message);
+                setError(normalizeUiError(err.message));
             } else {
                 setError("Admin login failed");
             }

@@ -1,7 +1,5 @@
-const explicitApiBase = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
-
-// Default to the Next.js same-origin proxy so production does not fall back to localhost.
-export const API_BASE = explicitApiBase ? explicitApiBase.replace(/\/+$/, "") : "/api";
+// Always call same-origin proxy from the browser; proxy target is configured via API_BASE_URL.
+export const API_BASE = "/api";
 
 export class ApiError extends Error {
     status: number;
