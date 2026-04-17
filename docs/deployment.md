@@ -50,6 +50,7 @@ Required:
 - ID_MAP_PATH
 - LOOKUP_MAP_PATH
 - CORS_ORIGINS
+- COOKIE_SECURE
 
 Recommended:
 
@@ -107,8 +108,9 @@ To ensure frontend can call backend in production:
 
 1. Set NEXT_PUBLIC_API_BASE_URL on Vercel to deployed backend URL.
 2. Set backend CORS_ORIGINS to exact frontend origin.
-3. Redeploy both services after env updates.
-4. Verify with browser network tab that requests hit /search successfully.
+3. Set backend COOKIE_SECURE=true (required for HTTPS cookie auth).
+4. Redeploy both services after env updates.
+5. Verify with browser network tab that requests hit /search successfully.
 
 ## 7) Free-tier optimization notes
 

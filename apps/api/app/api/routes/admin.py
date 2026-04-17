@@ -31,12 +31,17 @@ from app.core.config import settings
 router = APIRouter(prefix="/admin", tags=["admin"])
 
 
+def _cookie_samesite() -> str:
+    # Cross-site cookies require SameSite=None when Secure is enabled in production.
+    return "none" if settings.cookie_secure else "lax"
+
+
 def _set_auth_cookies(response, token: str, role: str) -> None:
     response.set_cookie(
         key="access_token",
         value=token,
         httponly=True,
-        samesite="lax",
+        samesite=_cookie_samesite(),
         secure=settings.cookie_secure,
         max_age=settings.jwt_access_token_expire_minutes * 60,
         path="/",
@@ -45,7 +50,7 @@ def _set_auth_cookies(response, token: str, role: str) -> None:
         key="user_role",
         value=role,
         httponly=False,
-        samesite="lax",
+        samesite=_cookie_samesite(),
         secure=settings.cookie_secure,
         max_age=settings.jwt_access_token_expire_minutes * 60,
         path="/",

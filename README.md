@@ -22,22 +22,50 @@ Semantic search app for programming questions using embeddings + FAISS.
 
 ## Quick start
 
-1. Copy env templates:
+1. Copy environment templates:
    - `cp .env.example .env`
    - `cp apps/web/.env.example apps/web/.env.local`
    - `cp apps/api/.env.example apps/api/.env`
-2. Set required backend auth values in `apps/api/.env`:
+2. In `apps/api/.env`, set at least these values:
    - `JWT_SECRET_KEY`
    - `SEED_ADMIN_EMAIL`
    - `SEED_ADMIN_PASSWORD`
-2. Install frontend dependencies:
-   - `cd apps/web && npm install`
-3. Create Python environments and install dependencies:
-   - `cd apps/api && python -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt`
-   - `cd scripts && python -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt`
-4. Run services:
-   - Frontend: `cd apps/web && npm run dev`
-   - API: `cd apps/api && uvicorn app.main:app --reload --port 8000`
+   - `GITHUB_MODELS_API_KEY`
+
+### Frontend
+
+```bash
+cd apps/web
+npm install
+npm run dev
+```
+
+### Backend
+
+```bash
+cd apps/api
+python3 -m venv .venv
+.venv/bin/python -m pip install -U pip
+.venv/bin/pip install -r requirements.txt
+.venv/bin/uvicorn app.main:app --reload --port 8000
+```
+
+Once both services are running:
+- Frontend: `http://localhost:3000`
+- Backend: `http://localhost:8000`
+
+## Auth behavior
+
+- Users can sign up and log in from the normal user flow.
+- Admin self-registration is not enabled in the UI/API.
+- Admin access is provided via seeded credentials from `apps/api/.env`.
+
+### Default seeded admin credentials
+
+- Admin ID (email): `admin@example.com`
+- Admin password: `ChangeThisAdminPass123`
+
+If your local `apps/api/.env` uses different seed values, those values become your admin login.
 
 ## Main routes
 
