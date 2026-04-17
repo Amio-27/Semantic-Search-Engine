@@ -96,6 +96,15 @@ def health(request: Request) -> HealthResponse:
     )
 
 
+@app.get("/", tags=["health"])
+def root() -> dict[str, str]:
+    return {
+        "message": "Semantic Programming Search API is running",
+        "health": "/health",
+        "docs": "/docs",
+    }
+
+
 app.include_router(search_router)
 app.include_router(auth_router)
 app.include_router(history_router)
