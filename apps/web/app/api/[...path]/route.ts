@@ -5,7 +5,7 @@ export const runtime = "nodejs";
 const upstreamBaseRaw =
     process.env.API_BASE_URL?.trim() ||
     process.env.NEXT_PUBLIC_API_BASE_URL?.trim() ||
-    "http://localhost:8000";
+    (process.env.NODE_ENV === "development" ? "http://localhost:8000" : "");
 const upstreamBase = upstreamBaseRaw.replace(/\/+$/, "");
 
 const HOP_BY_HOP_HEADERS = new Set([
@@ -17,6 +17,12 @@ const HOP_BY_HOP_HEADERS = new Set([
     "trailer",
     "transfer-encoding",
     "upgrade",
+]);
+
+const RESPONSE_BLOCKED_HEADERS = new Set([
+    ...HOP_BY_HOP_HEADERS,
+    "content-length",
+    "content-encoding",
 ]);
 
 type RouteContext = {
@@ -43,6 +49,16 @@ function buildForwardHeaders(request: NextRequest): Headers {
 }
 
 async function proxyToUpstream(request: NextRequest, context: RouteContext): Promise<NextResponse> {
+    if (!upstreamBase) {
+        return NextResponse.json(
+            {
+                error: "ConfigurationError",
+                detail: "API_BASE_URL is not configured for this deployment.",
+            },
+            { status: 500 },
+        );
+    }
+
     const targetUrl = buildUpstreamUrl(context.params.path, request.nextUrl.search);
     const method = request.method.toUpperCase();
     const hasBody = method !== "GET" && method !== "HEAD";
@@ -69,7 +85,7 @@ async function proxyToUpstream(request: NextRequest, context: RouteContext): Pro
     const responseHeaders = new Headers();
     upstreamResponse.headers.forEach((value, key) => {
         const lowerKey = key.toLowerCase();
-        if (HOP_BY_HOP_HEADERS.has(lowerKey) || lowerKey === "set-cookie") {
+        if (RESPONSE_BLOCKED_HEADERS.has(lowerKey) || lowerKey === "set-cookie") {
             return;
         }
         responseHeaders.append(key, value);
@@ -89,7 +105,9 @@ async function proxyToUpstream(request: NextRequest, context: RouteContext): Pro
         }
     }
 
-    return new NextResponse(upstreamResponse.body, {
+    const responseBody = method === "HEAD" ? null : await upstreamResponse.arrayBuffer();
+
+    return new NextResponse(responseBody, {
         status: upstreamResponse.status,
         headers: responseHeaders,
     });
