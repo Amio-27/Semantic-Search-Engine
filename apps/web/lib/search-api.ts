@@ -7,8 +7,12 @@ export type SearchResponse = {
 };
 
 function normalizeErrorMessage(status: number, detail?: string): string {
-    if (status === 400 || status === 422) {
+    if (status === 422) {
         return "Please enter a clearer question (at least 3 characters).";
+    }
+
+    if (status === 400) {
+        return detail?.trim() || "Search request could not be processed. Please try another query.";
     }
 
     if (status === 401 || status === 403) {

@@ -3,20 +3,35 @@
 @tailwind utilities;
 
 :root {
+    --bg-start: #eff6ff;
+    --bg-mid: #e2e8f0;
+    --bg-end: #d8e4ff;
+    --aura-left: rgba(14, 116, 144, 0.18);
+    --aura-right: rgba(30, 64, 175, 0.14);
+    --noise-rgb: 15, 23, 42;
+    --noise-opacity: 0.03;
+    --body-text: #0f172a;
+}
+
+html.dark {
     --bg-start: #020617;
     --bg-mid: #0f172a;
     --bg-end: #111827;
+    --aura-left: rgba(11, 37, 49, 0.95);
+    --aura-right: rgba(31, 41, 55, 0.88);
+    --noise-rgb: 248, 250, 252;
     --noise-opacity: 0.04;
+    --body-text: #e2e8f0;
 }
 
 body {
-    color: #e2e8f0;
-    background: radial-gradient(circle at 12% 10%, #0b2531 0%, transparent 40%),
-        radial-gradient(circle at 85% 5%, #1f2937 0%, transparent 35%),
+    color: var(--body-text);
+    background: radial-gradient(circle at 12% 10%, var(--aura-left) 0%, transparent 42%),
+        radial-gradient(circle at 85% 5%, var(--aura-right) 0%, transparent 38%),
         linear-gradient(150deg, var(--bg-start), var(--bg-end));
     min-height: 100vh;
     font-family: var(--font-space-grotesk), sans-serif;
-    transition: background-color 300ms ease, color 300ms ease;
+    transition: background 300ms ease, color 300ms ease;
 }
 
 body::before {
@@ -24,7 +39,7 @@ body::before {
     position: fixed;
     inset: 0;
     pointer-events: none;
-    background-image: radial-gradient(rgba(248, 250, 252, var(--noise-opacity)) 0.6px, transparent 0.6px);
+    background-image: radial-gradient(rgba(var(--noise-rgb), var(--noise-opacity)) 0.6px, transparent 0.6px);
     background-size: 3px 3px;
     opacity: 0.55;
     z-index: -1;
