@@ -85,5 +85,25 @@
       "c++",
       "file-io"
     ]
+  },
+  {
+    "record_id": "upload-1-chunk-0",
+    "question": "09_deployment_observability_notes.txt - chunk 1",
+    "answer_snippet": "Title: Deployment, Logging, and Observability Notes Deployment Model The project uses a separated service layout: - FastAPI backend for auth, search, and admin APIs - Embedding worker for background vectorization - SQLite or PostgreSQL for metadata persistence - Vector index layer for similarity retrieval - React or Next.js frontend for the user interface Observability Critical logs and metrics should include: - query text hash - user id or tenant id - retrieval latency - embedding latency - result count - reranker latency - ingestion job status - parser failures Alerting Examples - sudden spike in zero-result queries - embedding provider failures - long ingestion queue backlog - repeated admin authentication failures Debugging Search Issue",
+    "tags": [
+      "uploaded",
+      "admin",
+      "09_deployment_observability_notes.txt"
+    ]
+  },
+  {
+    "record_id": "upload-1-chunk-1",
+    "question": "09_deployment_observability_notes.txt - chunk 2",
+    "answer_snippet": "bedding provider failures - long ingestion queue backlog - repeated admin authentication failures Debugging Search Issues When a user reports weak results, inspect: 1. whether the document was ingested 2. whether chunking created useful segments 3. whether embeddings exist for the chunk 4. whether permissions filtered out the expected result 5. whether reranking changed the final ordering Keywords deployment architecture, observability, logging, search debugging, ingestion backlog, latency tracing",
+    "tags": [
+      "uploaded",
+      "admin",
+      "09_deployment_observability_notes.txt"
+    ]
   }
 ]

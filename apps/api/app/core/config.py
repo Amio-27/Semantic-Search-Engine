@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -41,6 +42,15 @@ class Settings(BaseSettings):
 
     upload_dir: str = str(API_ROOT.parent / "uploads")
     max_upload_size_bytes: int = 5 * 1024 * 1024
+
+    @field_validator("upload_dir", mode="before")
+    @classmethod
+    def resolve_upload_dir(cls, value: str | Path) -> str:
+        raw_path = Path(value) if value else (API_ROOT.parent / "uploads")
+        normalized = raw_path.expanduser()
+        if not normalized.is_absolute():
+            normalized = (API_ROOT / normalized).resolve()
+        return str(normalized)
 
     cors_origins: str = (
         "http://localhost:3000,"
