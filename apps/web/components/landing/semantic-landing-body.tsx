@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { motion, useScroll, useTransform } from "framer-motion";
+import { motion, useMotionValueEvent, useScroll, useSpring, useTransform } from "framer-motion";
 import type { HTMLMotionProps } from "framer-motion";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type SemanticLandingBodyProps = {
     isAuthenticated?: boolean;
@@ -28,6 +28,10 @@ type UseCase = {
     title: string;
     description: string;
     signal: string;
+    metricLabel: string;
+    metricBase: number;
+    metricPeak: number;
+    metricSuffix: string;
 };
 
 type DeepSection = {
@@ -114,21 +118,37 @@ const useCases: UseCase[] = [
         title: "Internal knowledge base",
         signal: "Engineering + Operations",
         description: "Search architecture docs, runbooks, and design notes with intent-level relevance.",
+        metricLabel: "Coverage",
+        metricBase: 68,
+        metricPeak: 97,
+        metricSuffix: "%",
     },
     {
         title: "Legal and research documents",
         signal: "Risk + Compliance",
         description: "Find policy clauses and precedent context without relying on exact phrasing.",
+        metricLabel: "Precision",
+        metricBase: 61,
+        metricPeak: 95,
+        metricSuffix: "%",
     },
     {
         title: "Support search",
         signal: "Customer Experience",
         description: "Help agents retrieve consistent answers from tickets, guides, and troubleshooting content.",
+        metricLabel: "Resolved/day",
+        metricBase: 420,
+        metricPeak: 2400,
+        metricSuffix: "",
     },
     {
         title: "Team wiki search",
         signal: "Cross-functional",
         description: "Navigate scattered documentation and instantly surface the most relevant team knowledge.",
+        metricLabel: "Adoption teams",
+        metricBase: 12,
+        metricPeak: 84,
+        metricSuffix: "",
     },
 ];
 
@@ -173,12 +193,39 @@ const governanceCards = [
     },
 ];
 
+const workflowMetricSeeds = {
+    subscribers: 1302620,
+    indexedChunks: 1130000,
+    dailyQueries: 214400,
+    latency: 92,
+};
+
+const workflowMetricPeaks = {
+    subscribers: 2584100,
+    indexedChunks: 1940000,
+    dailyQueries: 416800,
+    latency: 58,
+};
+
 const reveal = {
     initial: { opacity: 0, y: 36 },
     whileInView: { opacity: 1, y: 0 },
     transition: { duration: 0.55, ease: "easeOut" as const },
     viewport: { once: true, amount: 0.24 },
 } satisfies Pick<HTMLMotionProps<"div">, "initial" | "whileInView" | "transition" | "viewport">;
+
+function clamp01(value: number): number {
+    return Math.max(0, Math.min(1, value));
+}
+
+function phasedProgress(progress: number, index: number, total: number): number {
+    const start = index / total;
+    const end = (index + 1) / total;
+    if (end <= start) {
+        return 0;
+    }
+    return clamp01((progress - start) / (end - start));
+}
 
 function SectionHeading({
     eyebrow,
@@ -202,6 +249,9 @@ function SectionHeading({
 
 export default function SemanticLandingBody({ isAuthenticated = false }: SemanticLandingBodyProps) {
     const heroRef = useRef<HTMLElement | null>(null);
+    const workflowRef = useRef<HTMLElement | null>(null);
+    const workflowResetTimerRef = useRef<number | null>(null);
+    const useCasesRef = useRef<HTMLElement | null>(null);
 
     const { scrollYProgress: heroProgress } = useScroll({
         target: heroRef,
@@ -209,16 +259,92 @@ export default function SemanticLandingBody({ isAuthenticated = false }: Semanti
     });
     const heroY = useTransform(heroProgress, [0, 1], [0, 56]);
 
+    const { scrollYProgress: workflowProgress } = useScroll({
+        target: workflowRef,
+        offset: ["start 88%", "end 22%"],
+    });
+    const smoothWorkflowProgress = useSpring(workflowProgress, {
+        stiffness: 130,
+        damping: 26,
+        mass: 0.35,
+    });
+
+    const { scrollYProgress: useCasesScrollProgress } = useScroll({
+        target: useCasesRef,
+        offset: ["start 85%", "end 25%"],
+    });
+    const smoothUseCasesProgress = useSpring(useCasesScrollProgress, {
+        stiffness: 120,
+        damping: 24,
+        mass: 0.34,
+    });
+
     const [activeStep, setActiveStep] = useState(0);
-    const workflowSummary = useMemo(
-        () => ({
-            subscribers: "1,302,620+",
-            indexedChunks: "1,130,000",
-            dailyQueries: "214.4K",
-            latency: "92ms",
-        }),
+    const [workflowMetrics, setWorkflowMetrics] = useState(workflowMetricSeeds);
+    const [workflowPercent, setWorkflowPercent] = useState(0);
+    const [activeUseCase, setActiveUseCase] = useState(0);
+    const [useCasesProgress, setUseCasesProgress] = useState(0);
+
+    const numberFormatter = useMemo(() => new Intl.NumberFormat("en-US"), []);
+    const compactFormatter = useMemo(
+        () =>
+            new Intl.NumberFormat("en-US", {
+                notation: "compact",
+                maximumFractionDigits: 1,
+            }),
         [],
     );
+
+    useEffect(() => {
+        return () => {
+            if (workflowResetTimerRef.current) {
+                window.clearTimeout(workflowResetTimerRef.current);
+            }
+        };
+    }, []);
+
+    useMotionValueEvent(smoothWorkflowProgress, "change", (latest) => {
+        const progress = clamp01(latest);
+        const easedProgress = Math.pow(progress, 0.9);
+
+        setWorkflowPercent(Math.round(progress * 100));
+        setActiveStep(Math.min(storySteps.length - 1, Math.floor(progress * storySteps.length)));
+        setWorkflowMetrics({
+            subscribers: Math.round(
+                workflowMetricSeeds.subscribers +
+                easedProgress * (workflowMetricPeaks.subscribers - workflowMetricSeeds.subscribers),
+            ),
+            indexedChunks: Math.round(
+                workflowMetricSeeds.indexedChunks +
+                easedProgress * (workflowMetricPeaks.indexedChunks - workflowMetricSeeds.indexedChunks),
+            ),
+            dailyQueries: Math.round(
+                workflowMetricSeeds.dailyQueries +
+                easedProgress * (workflowMetricPeaks.dailyQueries - workflowMetricSeeds.dailyQueries),
+            ),
+            latency: Math.round(
+                workflowMetricSeeds.latency -
+                easedProgress * (workflowMetricSeeds.latency - workflowMetricPeaks.latency),
+            ),
+        });
+
+        if (workflowResetTimerRef.current) {
+            window.clearTimeout(workflowResetTimerRef.current);
+        }
+
+        workflowResetTimerRef.current = window.setTimeout(() => {
+            setActiveStep(0);
+            setWorkflowPercent(0);
+            setWorkflowMetrics(workflowMetricSeeds);
+        }, 700);
+    });
+
+    useMotionValueEvent(smoothUseCasesProgress, "change", (latest) => {
+        const progress = clamp01(latest);
+        const activeIndex = Math.min(useCases.length - 1, Math.floor(progress * useCases.length));
+        setUseCasesProgress(progress);
+        setActiveUseCase(activeIndex);
+    });
 
     return (
         <>
@@ -329,7 +455,7 @@ export default function SemanticLandingBody({ isAuthenticated = false }: Semanti
                 </div>
             </section>
 
-            <section className="px-6 pb-24 md:pb-32">
+            <section ref={workflowRef} className="px-6 pb-24 md:pb-32">
                 <div className="mx-auto w-full max-w-6xl rounded-3xl border border-slate-300/70 bg-white/70 p-6 shadow-2xl backdrop-blur dark:border-white/15 dark:bg-slate-900/55 md:p-8">
                     <motion.div {...reveal}>
                         <SectionHeading
@@ -339,22 +465,33 @@ export default function SemanticLandingBody({ isAuthenticated = false }: Semanti
                         />
                     </motion.div>
 
+                    <div className="mt-6 h-1.5 w-full overflow-hidden rounded-full bg-slate-300/70 dark:bg-white/10">
+                        <motion.div
+                            style={{ scaleX: smoothWorkflowProgress }}
+                            className="h-full origin-left bg-gradient-to-r from-cyan-500 via-indigo-500 to-violet-500"
+                        />
+                    </div>
+                    <div className="mt-2 flex items-center justify-between text-[11px] text-slate-600 dark:text-slate-400">
+                        <span>Scroll-synced simulation</span>
+                        <span>{workflowPercent}%</span>
+                    </div>
+
                     <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                         <motion.div whileInView={{ opacity: 1, y: 0 }} initial={{ opacity: 0, y: 14 }} className="rounded-2xl border border-slate-300/80 bg-white/80 p-4 dark:border-white/10 dark:bg-white/5">
                             <p className="text-[11px] uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">Subscribers</p>
-                            <p className="mt-1 text-xl font-semibold text-slate-900 dark:text-slate-100">{workflowSummary.subscribers}</p>
+                            <p className="mt-1 text-xl font-semibold text-slate-900 dark:text-slate-100">{numberFormatter.format(workflowMetrics.subscribers)}+</p>
                         </motion.div>
                         <motion.div whileInView={{ opacity: 1, y: 0 }} initial={{ opacity: 0, y: 14 }} transition={{ delay: 0.05 }} className="rounded-2xl border border-cyan-300/25 bg-cyan-400/10 p-4">
                             <p className="text-[11px] uppercase tracking-[0.14em] text-cyan-200">Indexed chunks</p>
-                            <p className="mt-1 text-xl font-semibold text-cyan-100">{workflowSummary.indexedChunks}</p>
+                            <p className="mt-1 text-xl font-semibold text-cyan-100">{numberFormatter.format(workflowMetrics.indexedChunks)}</p>
                         </motion.div>
                         <motion.div whileInView={{ opacity: 1, y: 0 }} initial={{ opacity: 0, y: 14 }} transition={{ delay: 0.1 }} className="rounded-2xl border border-indigo-300/25 bg-indigo-400/10 p-4">
                             <p className="text-[11px] uppercase tracking-[0.14em] text-indigo-200">Daily queries</p>
-                            <p className="mt-1 text-xl font-semibold text-indigo-100">{workflowSummary.dailyQueries}</p>
+                            <p className="mt-1 text-xl font-semibold text-indigo-100">{compactFormatter.format(workflowMetrics.dailyQueries)}</p>
                         </motion.div>
                         <motion.div whileInView={{ opacity: 1, y: 0 }} initial={{ opacity: 0, y: 14 }} transition={{ delay: 0.15 }} className="rounded-2xl border border-emerald-300/25 bg-emerald-400/10 p-4">
                             <p className="text-[11px] uppercase tracking-[0.14em] text-emerald-200">Latency</p>
-                            <p className="mt-1 text-xl font-semibold text-emerald-100">{workflowSummary.latency}</p>
+                            <p className="mt-1 text-xl font-semibold text-emerald-100">{workflowMetrics.latency}ms</p>
                         </motion.div>
                     </div>
 
@@ -366,10 +503,9 @@ export default function SemanticLandingBody({ isAuthenticated = false }: Semanti
                                 whileInView={{ opacity: 1, y: 0 }}
                                 viewport={{ once: true, amount: 0.2 }}
                                 transition={{ delay: index * 0.06, duration: 0.35 }}
-                                onMouseEnter={() => setActiveStep(index)}
                                 className={`rounded-2xl border p-4 transition ${activeStep === index
-                                        ? "border-indigo-400/70 bg-indigo-500/15 shadow-[0_0_0_1px_rgba(99,102,241,0.35)]"
-                                        : "border-slate-300/70 bg-white/70 dark:border-white/10 dark:bg-white/5"
+                                    ? "border-indigo-400/70 bg-indigo-500/15 shadow-[0_0_0_1px_rgba(99,102,241,0.35)]"
+                                    : "border-slate-300/70 bg-white/70 dark:border-white/10 dark:bg-white/5"
                                     }`}
                             >
                                 <p className="text-[11px] uppercase tracking-[0.16em] text-indigo-600 dark:text-indigo-300">{step.label}</p>
@@ -388,7 +524,7 @@ export default function SemanticLandingBody({ isAuthenticated = false }: Semanti
                 </div>
             </section>
 
-            <section className="px-6 pb-24 pt-24 md:pb-32">
+            <section ref={useCasesRef} className="px-6 pb-24 pt-24 md:pb-32">
                 <div className="mx-auto w-full max-w-6xl">
                     <motion.div {...reveal}>
                         <SectionHeading
@@ -398,6 +534,19 @@ export default function SemanticLandingBody({ isAuthenticated = false }: Semanti
                         />
                     </motion.div>
 
+                    <div className="mt-8 rounded-2xl border border-slate-300/70 bg-white/70 p-4 backdrop-blur dark:border-white/10 dark:bg-white/5">
+                        <div className="mb-2 flex items-center justify-between text-[11px] uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
+                            <span>Use-case progression</span>
+                            <span>{Math.round(useCasesProgress * 100)}%</span>
+                        </div>
+                        <div className="h-1.5 overflow-hidden rounded-full bg-slate-300/70 dark:bg-white/10">
+                            <motion.div
+                                style={{ scaleX: smoothUseCasesProgress }}
+                                className="h-full origin-left bg-gradient-to-r from-cyan-500 via-indigo-500 to-violet-500"
+                            />
+                        </div>
+                    </div>
+
                     <div className="mt-12 grid gap-6 md:grid-cols-2">
                         {useCases.map((item, index) => (
                             <motion.article
@@ -406,9 +555,27 @@ export default function SemanticLandingBody({ isAuthenticated = false }: Semanti
                                 whileInView={{ opacity: 1, y: 0 }}
                                 viewport={{ once: true, amount: 0.2 }}
                                 transition={{ delay: index * 0.1, duration: 0.45 }}
-                                className="rounded-3xl border border-slate-300/70 bg-white/65 p-6 shadow-xl backdrop-blur dark:border-white/15 dark:bg-white/10"
+                                animate={{
+                                    y: activeUseCase === index ? -4 : 0,
+                                    scale: activeUseCase === index ? 1.01 : 1,
+                                }}
+                                className={`rounded-3xl border p-6 shadow-xl backdrop-blur transition ${activeUseCase === index
+                                        ? "border-cyan-300/55 bg-cyan-400/10 shadow-[0_18px_50px_-25px_rgba(34,211,238,0.6)]"
+                                        : "border-slate-300/70 bg-white/65 dark:border-white/15 dark:bg-white/10"
+                                    }`}
                             >
                                 <p className="text-xs uppercase tracking-[0.16em] text-cyan-700 dark:text-cyan-300">{item.signal}</p>
+                                <div className="mt-3 flex items-center justify-between">
+                                    <p className="text-xs uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">{item.metricLabel}</p>
+                                    <p className="text-sm font-semibold text-cyan-700 dark:text-cyan-300">
+                                        {Math.round(
+                                            item.metricBase +
+                                            phasedProgress(useCasesProgress, index, useCases.length) *
+                                            (item.metricPeak - item.metricBase),
+                                        )}
+                                        {item.metricSuffix}
+                                    </p>
+                                </div>
                                 <h3 className="mt-2 font-display text-3xl text-slate-900 dark:text-white">{item.title}</h3>
                                 <p className="mt-3 text-sm leading-7 text-slate-700 dark:text-slate-300">{item.description}</p>
                             </motion.article>
